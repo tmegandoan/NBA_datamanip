@@ -1,0 +1,84 @@
+---
+title: "NBA_datamanipulation"
+output: html_document
+date: '2022-06-20'
+---
+
+#loading data and necessary packages
+```{r}
+NBA_Dat=read.csv("/Users/megandoan/Downloads/nba.csv")
+library(ggplot2)
+library(caret)
+library(dplyr)
+library(ISLR)
+```
+
+# cleaning the data set
+```{r}
+NBA=NBA_Dat%>%
+  rename(FGP=FG.,TPP=X3P.,FTP=FT.)%>%
+  mutate(HA=ifelse(grepl("vs",MATCHUP),"home","away"))
+
+#team: home team
+#FGM : field goals made
+#FGA: field goals attempted
+#FGP: field goal percentage 
+#X3PM: three pointers made
+#X3PM: three pointers attempted 
+#TPP: three pointer percentage
+#FTM: free throw made
+#FTA: free throw attempt
+#FTP: free throw percentage
+#OREB: offensive rebounds
+#DREB: defensive rebounds
+#REB: total rebounds
+#AST: assists
+#STL: steals
+#BLK: blocks
+#TOV: turnovers
+#PF: personal fouls
+
+```
+
+
+# plotting wins and losses for home/away games 
+```{r}
+ggplot(NBA,aes(x=HA,fill=W.L))+geom_bar(position = "fill")
+
+# this percent stacked bar graph tells us that it matters if the game is played at home or away because the wins and losses differ on location 
+```
+
+# building a base logistical regression
+```{r}
+HG=NBA%>%
+  filter(HA=="home")%>%
+  select(W.L,PTS,FGP,TPP,FTP,REB,AST,STL,BLK,TOV,MIN)
+
+View(HG)
+
+logit_model=train(W.L~.,HG,method="glm",family="binomial")
+summary(logit_model)
+```
+
+# building a refined logistical regression with AIC
+```{r}
+logit_model2=train(W.L~.,HG,method="glmStepAIC",family="binomial",trace=FALSE)
+
+summary(logit_model2)
+```
+
+# looking at the odds
+```{r}
+exp(coef(logit_model2$finalModel))
+
+# if u hold all variables fixed, for every one percentage point increase in the FGP, the odds of a win in an NBA home game increases by around 42.6% percent 
+# if u hold all var fixed, for every one additional turnover, the odds of a win in an NBA home game decreases by around 20% percent 
+```
+
+# predicting the outcome of a game
+```{r}
+new=data.frame(MIN=241, PTS=126, FGP=54.8, TPP=42.5, FTP=70.8, REB=35, AST=27, STL=10, BLK=8, TOV=9)
+
+predict(logit_model2,new)
+```
+
